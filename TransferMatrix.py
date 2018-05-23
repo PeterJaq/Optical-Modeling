@@ -40,6 +40,7 @@ class OpticalModeling(object):
         self.AM15 = self.LoadSolar(Solarfile)  # load/reshape into desired WLs
         self.nk = self.Load_nk(libname)
 
+
         if plotWL is None:  # choose some WL with a gap of a multiple of 50
             wlrange = WLrange[1] - WLrange[0]
             mid = 50 * ((WLrange[1] + WLrange[0]) // 100)
@@ -69,7 +70,9 @@ class OpticalModeling(object):
 
         # ### These will be 1D numpy arrays, x: position
         self.Reflection = None  # Reflection 
-        self.Transmission = None  # Transmission 
+        self.Transmission = None  # Transmission
+        self.total_Absorption = None
+        self.mean_abs = None
 
         # ### This will be a 2D pandas dataframe,
         # wavelegths vs absorption for each material
@@ -191,7 +194,7 @@ class OpticalModeling(object):
         Note: the first layer is glass and is excluded in x_pos
         """
         return [bisect.bisect_right(self.x_pos, self.t_cumsum[i])
-                for i in xrange(len(self.t))]
+                for i in range(len(self.t))]
 
     def CalE(self, S, S_prime, S_dprime):
         """
@@ -214,7 +217,7 @@ class OpticalModeling(object):
         T = abs(2.0 / (1 + self.nk[self.layers[0]])) / (1 - R_glass * R)**0.5
 
         layers = self.layers + ['Air']
-        for matind in xrange(1, len(layers) - 1):  # last one is 'air', ignore
+        for matind in range(1, len(layers) - 1):  # last one is 'air', ignore
             mater = layers[matind]
             for i, w in enumerate(self.WL):
                 xi = 2.0 * np.pi * self.nk[mater][i] / w
@@ -238,6 +241,8 @@ class OpticalModeling(object):
                 self.E[l:r, i] = T[i] * numerator / denom
 
         self.Reflection = R_glass + T_glass**2 * R / (1 - R_glass * R)
+        self.total_Absorption = 1 - self.Reflection
+        self.mean_abs = np.mean(self.total_Absorption)
 
         return None
 
@@ -245,7 +250,7 @@ class OpticalModeling(object):
         Imats, Lmats = self.Imats, self.Lmats
         layers = self.layers + ["Air"]
         # precalculate all the required Imat and Lmat
-        for matind in xrange(len(layers)-1):
+        for matind in range(len(layers)-1):
             mater, nex = layers[matind], layers[matind+1]
             if matind not in Lmats:
                 Lmats[matind] = self.L_mat(matind)
@@ -272,20 +277,20 @@ class OpticalModeling(object):
         layers = self.layers + ["Air"]
 
         # calculate S_prime and S
-        S = np.array([np.eye(2, dtype=complex) for _ in xrange(nWL)])
-        for matind in xrange(1, len(layers)):
+        S = np.array([np.eye(2, dtype=complex) for _ in range(nWL)])
+        for matind in range(1, len(layers)):
             pre, mater = layers[matind - 1], layers[matind]
-            for i in xrange(nWL):
+            for i in range(nWL):
                 S[i] = S[i].dot(Lmats[matind - 1][i])
                 S[i] = S[i].dot(Imats[(pre, mater)][i])
             S_prime[matind] = np.copy(S)
 
         S_dprime[len(layers)-2] = Imats[(layers[-2], layers[-1])]
 
-        for matind in xrange(len(layers)-3, 0, -1):
+        for matind in range(len(layers)-3, 0, -1):
             mater, nex = layers[matind], layers[matind + 1]
             tmp = np.copy(S_dprime[matind + 1])
-            for i in xrange(nWL):
+            for i in range(nWL):
                 tmp[i] = np.dot(Lmats[matind+1][i], tmp[i])
                 tmp[i] = np.dot(Imats[(mater, nex)][i], tmp[i])
             S_dprime[matind] = tmp
@@ -306,12 +311,14 @@ class OpticalModeling(object):
         # initialize Absrate with E^2, multiply nk later
         self.AbsRate = abs(self.E)**2
         self.Absorption = pd.DataFrame()  # initialize Absorption
-        for matind in xrange(1, len(self.t)):
+        for matind in range(1, len(self.t)):
             mater = self.layers[matind]
             posind = self.x_ind[matind-1], self.x_ind[matind]
             mlabel = "L" + str(matind) + "_" + mater
-            self.AbsRate[posind[0]:posind[1]] *= (
-                a[mater] * np.real(self.nk[mater]))
+            #A = self.AbsRate[posind[0]:posind[1]]
+            #B = a[mater], np.real(self.nk[mater])
+            self.AbsRate[posind[0]:posind[1]] *= np.dot(a[mater], np.real(self.nk[mater]))
+            #self.AbsRate[posind[0]:posind[1]] = np.multiply(self.AbsRate[posind[0]:posind[1]], a[mater], np.real(self.nk[mater]))
             self.Absorption[mlabel] = (
                 np.sum(self.AbsRate[posind[0]:posind[1]], 0) *
                 self.posstep * 1e-7)
@@ -332,7 +339,7 @@ class OpticalModeling(object):
         self.Gx = Q * 1e-12 / (h * c) * self.WL
 
         Gx_x = [np.sum(self.Gx[self.x_ind[i-1]:self.x_ind[i]])
-                for i in xrange(1, len(self.layers))]
+                for i in range(1, len(self.layers))]
         self.Jsc = np.array(Gx_x) * self.WLstep * self.posstep * q * 1e-4
 
         return None
@@ -365,7 +372,7 @@ class OpticalModeling(object):
             label = "%s nm" % w
             # find the index closest to the desired wavelength
             # can use bisect actually
-            xind = min(xrange(len(self.WL)), key=lambda x: abs(self.WL[x] - w))
+            xind = min(range(len(self.WL)), key=lambda x: abs(self.WL[x] - w))
             ax1.plot(self.x_pos, E2[:, xind], label=label, linewidth=2)
         ax1.set_ylim(ymin=0)
 
@@ -390,7 +397,7 @@ class OpticalModeling(object):
         #                fontsize=20)
 
         # layer bars
-        for matind in xrange(2, len(self.layers)+1):
+        for matind in range(2, len(self.layers)+1):
             ax1.axvline(self.t_cumsum[matind-1], color="black")
             ax2.axvline(self.t_cumsum[matind-1], color="black")
             x_text = (self.t_cumsum[matind-2] +
@@ -430,15 +437,21 @@ class OpticalModeling(object):
         ax3.set_xlabel('Wavelength (nm)', size=20)
         ax3.tick_params(labelsize=18)
 
-        for matind in xrange(1, len(self.t)):
+        """
+         for matind in range(1, len(self.t)):
             mater = self.layers[matind]
             mlabel = "L" + str(matind) + "_" + mater
             ax3.plot(self.WL, 100.0 * self.Absorption[mlabel],
                      label=mlabel, linewidth=2)
+        
+        """
+
         ax3.plot(self.WL, 100.0 * self.Transmission,
                  label="Transmission", linewidth=2)
         ax3.plot(self.WL, 100.0 * self.Reflection,
                  label="Reflection", linewidth=2)
+        ax3.plot(self.WL, 100.0 * self.total_Absorption,
+                 label="Absorption", linewidth=2)
         ax3.legend(loc='upper right', fontsize=14, frameon=False).draggable()
 
         ax3.set_ylim(ymin=0, ymax=100.0)
@@ -491,7 +504,7 @@ class OpticalModeling(object):
         # fig5.suptitle('Photon Absorption Rate (1/sec$\cdot$nm$\cdot$cm$^3$)',
         #               fontsize=16, fontweight='bold')
 
-        for matind in xrange(2, len(self.layers)+1):
+        for matind in range(2, len(self.layers)+1):
             ax4.axvline(self.t_cumsum[matind-1], color="black")
             ax5.axvline(self.t_cumsum[matind-1], color="black")
 
@@ -528,12 +541,12 @@ class OpticalModeling(object):
         self.JscData["Layer No."] = range(1, len(self.layers))
         self.JscData["Material"] = self.layers[1:]
         self.JscData["Thickness (nm)"] = self.t[1:]
-        self.JscData["Jsc_Max (mA/cm^2)"] = np.round(self.Jsc, 2)
+        #self.JscData["Jsc_Max (mA/cm^2)"] = np.round(self.Jsc, 2)
 
         print ("\nSummary of the modeled results between " +
                "{0:.1f} and {1:.1f} nm\n".format(self.WL[0], self.WL[-1]))
-
-        print self.JscData.to_string(index=False)
+        print(self.JscData.to_string(index=False))
+        print(np.mean(self.total_Absorption))
         return self.JscData
 
     def I_mat(self, mat1, mat2):
@@ -551,7 +564,7 @@ class OpticalModeling(object):
         R = (n1s-n2s) / (n1s+n2s)
         T = 2.0 * n1s / (n1s+n2s)
         I = np.array([[[1.0, R[i]], [R[i], 1.0]] / T[i]
-                      for i in xrange(R.shape[0])])
+                      for i in range(R.shape[0])])
         return I
 
     def L_mat(self, matind):
@@ -575,7 +588,7 @@ class OpticalModeling(object):
         x = 2.0 * (np.pi) * self.nk[mat] / self.WL
         L = np.array([[[np.exp((-1j) * x[i] * d), 0],
                        [0, np.exp(1j * x[i] * d)]]
-                      for i in xrange(x.shape[0])])
+                      for i in range(x.shape[0])])
         return L
 
 

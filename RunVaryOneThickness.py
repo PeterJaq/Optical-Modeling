@@ -20,17 +20,17 @@ plt.style.use('ggplot')
 #------------------------------ User input --------------------------------
 
 Device = [
-          ("Glass"  ,   0), # layer 0, substrate, thickness doesn't mater
-          ("ITO"    , 145), # layer 1
-          ("ZnO"    , 120), # layer 2
-          ("PbS"    , 250),
-          ("Au"     , 150)
+    ("SiO2", 0),  # layer 0, substrate, thickness doesn't mater                      # layer 1
+    ("SiO2", 136.93),  # layer 2
+    ("Zn0.16", 20.9),
+    ("SiO2", 41.73),
+    ("Cu", 200)
          ]
 
 
 ##############  vary the thickness of one layer     ##############
 #VaryOneLayer = False  # vary the thickness of one layer or two layers(False)
-ToVary = 3  # the layer to vary
+ToVary = 2  # the layer to vary
 #t_range = np.arange(100, 601, 10) # start, end (not included), step
 t_range = np.arange(50, 351, 10)
 #t_range = [50, 75, 125, 150, 250, 300, 350] # manually input range
@@ -39,7 +39,7 @@ t_range = np.arange(50, 351, 10)
 # Will calculate the max Jsc in this layer (assuming 100% IQE)
 # alternatively, can use 'R' for reflection or 'T' for transmission,
 # 'A' for total absorption (=1-R-T), or 'all' to plot all of available figures
-target = 3
+target = 2
 #target = 'R'
 
 
@@ -54,11 +54,11 @@ target = 3
 #########################################################################
 
 
-libname = "Index_of_Refraction_library_Demo.csv"
+libname = "Index_Refraction_Zn+SiO2.csv"
 Solarfile = "SolarAM15.csv"  # Wavelength vs  mW*cm-2*nm-1
 
 posstep = 1.0  # thickness step size
-WLrange = [350, 1200]  # wavelength range (nm)
+WLrange = [250, 1500]  # wavelength range (nm)
 WLstep = 2.0  # wavelength step size (nm)
 
 SaveName = "Result"

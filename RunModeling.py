@@ -35,11 +35,11 @@ irrelivant. If a thin substrate is used, add "Air" as the first layer
 indice are 0-based, i.e, the index of the first layer is 0
 """
 Device = [
-          ("Glass"  , 100), # layer 0
-          ("ITO"    , 145), # layer 1
-          ("ZnO"    , 120),
-          ("PbS"    , 250),
-          ("Au"     , 150)
+    ("Air", 0),  # layer 0, substrate, thickness doesn't mater                      # layer 1
+    ("SiO2", 136.93),  # layer 2
+    ("Zn0.16", 26.0),
+    ("SiO2", 41.73),
+    ("Cu", 50)
          ]
 
 
@@ -50,13 +50,13 @@ there sould be a "Mater1_n" column, and a "Mater1_k" column.
 The header for the wavelength column ***MUST be*** : "Wavelength (nm)"
 """
 
-libname = "Index_of_Refraction_library_Demo.csv"
+libname = "Index_Refraction_Zn+SiO2.csv"
 
 # file name of the AM1.5 solar spectra, already in the folder
 # change it ONLY if you want to use your own file
 Solarfile = "SolarAM15.csv"  # Wavelength vs  mW*cm-2*nm-1
 
-wavelength_range = [350, 1200]  # wavelength range (nm) to model [min, max]
+wavelength_range = [280, 1500]  # wavelength range (nm) to model [min, max]
 
 # ------------------- End of Mandatary input -------------------------------
 
